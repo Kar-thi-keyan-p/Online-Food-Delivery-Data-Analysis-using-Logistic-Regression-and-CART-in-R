@@ -1,0 +1,29 @@
+
+library(tidyverse)
+library(caret)
+library(pROC)
+data <- read.csv("onlinefoods datset.csv")
+target_col <- "Output"
+data[[target_col]] <- ifelse(data[[target_col]] %in% c("Yes", "1", 1, "Ordered"), 1, 0)
+data[[target_col]] <- as.factor(data[[target_col]])
+set.seed(123)
+split_index <- createDataPartition(data[[target_col]], p = 0.8, list = FALSE)
+train_data <- data[split_index, ]
+test_data <- data[-split_index, ]
+logit_model <- glm(as.formula(paste(target_col, "~ .")),
+                   data = train_data,
+                   family = binomial)
+summary(logit_model)
+logit_pred <- predict(logit_model, newdata = test_data, type = "response")
+logit_class <- ifelse(logit_pred > 0.5, 1, 0)
+predicted <- factor(logit_class, levels = c(0, 1))
+actual <- factor(test_data[[target_col]], levels = c(0, 1))
+conf_matrix_logit <- confusionMatrix(predicted, actual)
+print(conf_matrix_logit)
+accuracy <- mean(predicted == actual)
+cat(" Logistic Regression Model Accuracy:", round(accuracy * 100, 2), "%\n")
+roc_curve <- roc(actual, as.numeric(logit_pred))
+plot(roc_curve, col = "blue", lwd = 2,
+     main = "ROC Curve for Logistic Regression Model")
+auc_value <- auc(roc_curve)
+cat(" AUC Value:", auc_value, "\n")
